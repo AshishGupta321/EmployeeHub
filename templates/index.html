@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#151a2c">
+
+    <title>EmployeeHub — People Operations</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+<div class="shell">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <a class="brand" href="/">
+            <span class="brand-logo">✳</span>
+            <span>
+                Employee<span class="accent">Hub</span>
+                <small>PEOPLE OPERATIONS</small>
+            </span>
+        </a>
+
+        <div class="nav-label">WORKSPACE</div>
+
+        <a class="nav-link active" href="#overview" data-nav="overview">
+            ◫ <span>Overview</span>
+        </a>
+
+        <a class="nav-link" href="#employees" data-nav="employees">
+            ♙ <span>Employees</span>
+        </a>
+
+        <a class="nav-link" href="#insights" data-nav="insights">
+            ▥ <span>Salary insights</span>
+        </a>
+
+        <div class="nav-label spaced">MANAGEMENT</div>
+
+        <button class="nav-link" id="navAdd">
+            ＋ <span>Add employee</span>
+        </button>
+
+        <div class="side-bottom">
+            <div class="api-state">
+                <i></i>
+                API connection
+                <b id="apiStatus">Checking</b>
+            </div>
+
+            <div class="side-foot">
+                EmployeeHub v2.0<br>
+                <span>FastAPI · SQLite</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main">
+
+        <header class="topbar">
+            <button class="icon-btn mobile-menu" id="menuToggle"
+                    aria-label="Toggle navigation">☰</button>
+
+            <div class="crumb">
+                WORKSPACE <span>/</span>
+                <b id="crumb">OVERVIEW</b>
+            </div>
+
+            <div class="top-actions">
+                <button class="icon-btn" id="themeToggle"
+                        title="Toggle dark mode">☾</button>
+                <button class="profile-btn" id="profileButton">EH</button>
+            </div>
+        </header>
+
+        <!-- Overview -->
+        <section class="page-head" id="overview">
+            <div>
+                <div class="eyebrow">— &nbsp; PEOPLE, MADE SIMPLE</div>
+
+                <h1>
+                    Good work starts with
+                    <em>great people.</em>
+                </h1>
+
+                <p>
+                    Your team's home for employee records,
+                    compensation and people insights.
+                </p>
+            </div>
+
+            <span class="today">
+                <i></i>
+                <span id="today"></span>
+            </span>
+        </section>
+
+        <!-- Hero -->
+        <section class="hero">
+            <div class="hero-text">
+                <span class="hero-kicker">YOUR TEAM, AT A GLANCE</span>
+
+                <h2>
+                    Build a better workplace,<br>
+                    one person at a time.
+                </h2>
+
+                <p>
+                    Keep employee information organized and make
+                    confident, data-informed decisions.
+                </p>
+
+                <button class="btn light" id="explore">
+                    Explore directory <b>↗</b>
+                </button>
+            </div>
+
+            <div class="hero-art" aria-hidden="true">
+                <div class="art-ring"></div>
+
+                <div class="art-card">
+                    <span class="figure f1"><i></i><b></b></span>
+                    <span class="figure f2"><i></i><b></b></span>
+                    <span class="figure f3"><i></i><b></b></span>
+                    <span class="check">✓</span>
+                </div>
+
+                <div class="float-tag">● &nbsp; Team workspace</div>
+            </div>
+
+            <div class="hero-foot">
+                <span>PEOPLE FIRST. ALWAYS.</span>
+                <span>01 — OVERVIEW</span>
+            </div>
+        </section>
+
+        <!-- Statistics -->
+        <section class="stats">
+            <article class="stat">
+                <div class="stat-head">
+                    Total employees
+                    <span class="stat-icon purple">♙</span>
+                </div>
+                <strong id="total">—</strong>
+                <small>Registered team members</small>
+            </article>
+
+            <article class="stat">
+                <div class="stat-head">
+                    Average salary
+                    <span class="stat-icon blue">↗</span>
+                </div>
+                <strong id="average">—</strong>
+                <small>Across all employees</small>
+            </article>
+
+            <article class="stat">
+                <div class="stat-head">
+                    Highest salary
+                    <span class="stat-icon green">↑</span>
+                </div>
+                <strong id="highest">—</strong>
+                <small id="highName">Top compensation</small>
+            </article>
+
+            <article class="stat">
+                <div class="stat-head">
+                    Lowest salary
+                    <span class="stat-icon amber">↓</span>
+                </div>
+                <strong id="lowest">—</strong>
+                <small id="lowName">Entry compensation</small>
+            </article>
+        </section>
+
+        <!-- Employee directory and management -->
+        <section class="main-grid">
+
+            <article class="panel directory" id="employees">
+                <div class="panel-head">
+                    <div>
+                        <label>TEAM DIRECTORY</label>
+                        <h2>Employee directory</h2>
+                        <p>Search, sort and manage your people.</p>
+                    </div>
+
+                    <button class="btn primary" id="addTop">
+                        ＋ Add employee
+                    </button>
+                </div>
+
+                <!-- Search, designation and sorting -->
+                <div class="filters">
+                    <label class="search">
+                        ⌕
+                        <input id="search"
+                               placeholder="Search name or ID..."
+                               type="search">
+                    </label>
+
+                    <select id="designationFilter">
+                        <option value="">All designations</option>
+                    </select>
+
+                    <select id="sort">
+                        <option value="id">Sort: ID</option>
+                        <option value="name">Name A–Z</option>
+                        <option value="-salary">Salary: High to low</option>
+                        <option value="salary">Salary: Low to high</option>
+                        <option value="age">Age: Youngest</option>
+                    </select>
+                </div>
+
+                <!-- Salary filters -->
+                <div class="filters secondary">
+                    <input id="minSalary" type="number" min="0"
+                           placeholder="Minimum salary">
+
+                    <input id="maxSalary" type="number" min="0"
+                           placeholder="Maximum salary">
+
+                    <button class="btn soft" id="filterBtn">Filter</button>
+                    <button class="btn ghost" id="resetBtn">Reset</button>
+                </div>
+
+                <!-- Employee table -->
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>EMPLOYEE</th>
+                                <th>AGE</th>
+                                <th>SALARY</th>
+                                <th>DESIGNATION</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="rows">
+                            <tr>
+                                <td colspan="5" class="empty">
+                                    Loading employees…
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-foot">
+                    <span id="resultCount">Loading</span>
+                    <button id="refresh" class="link-btn">
+                        ↻ Refresh data
+                    </button>
+                </div>
+            </article>
+
+            <!-- Employee form -->
+            <aside class="panel management" id="employeeFormPanel">
+                <div class="panel-head">
+                    <div>
+                        <label id="formLabel">NEW TEAM MEMBER</label>
+                        <h2 id="formTitle">Add employee</h2>
+                        <p id="formSub">Create an employee record.</p>
+                    </div>
+
+                    <span class="form-icon">＋</span>
+                </div>
+
+                <form id="employeeForm">
+                    <div class="form-fields">
+                        <label>
+                            Employee ID
+                            <input id="employeeId" type="number" min="1"
+                                   placeholder="e.g. 105" required>
+                        </label>
+
+                        <label>
+                            Full name
+                            <input id="employeeName" maxlength="100"
+                                   placeholder="e.g. Aditi Sharma" required>
+                        </label>
+
+                        <label>
+                            Age
+                            <input id="employeeAge" type="number"
+                                   min="16" max="100"
+                                   placeholder="e.g. 24" required>
+                        </label>
+
+                        <label>
+                            Annual salary (₹)
+                            <input id="employeeSalary" type="number"
+                                   min="0" step=".01"
+                                   placeholder="e.g. 650000" required>
+                        </label>
+
+                        <label class="wide">
+                            Designation
+                            <input id="employeeDesignation" maxlength="100"
+                                   placeholder="e.g. Software Engineer" required>
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn primary" id="submitEmployee"
+                                type="submit">
+                            Add employee ↗
+                        </button>
+
+                        <button class="btn ghost" id="clearForm" type="button">
+                            Clear
+                        </button>
+                    </div>
+
+                    <button class="btn ghost cancel hidden"
+                            id="cancelEdit" type="button">
+                        Cancel editing
+                    </button>
+                </form>
+
+                <div class="divider"></div>
+
+                <!-- Salary adjustment -->
+                <div class="small-head">
+                    <div>
+                        <h3>Salary adjustment</h3>
+                        <p>Increase salary for an existing employee.</p>
+                    </div>
+                    <span class="stat-icon blue">↗</span>
+                </div>
+
+                <form id="salaryForm" class="salary-form">
+                    <label>
+                        Employee
+                        <select id="salaryEmployee" required>
+                            <option value="">Select employee</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Increase amount (₹)
+                        <input id="increaseAmount" type="number" min="1"
+                               placeholder="e.g. 5000" required>
+                    </label>
+
+                    <button class="btn soft full" type="submit">
+                        Apply salary increase
+                    </button>
+                </form>
+
+                <div class="divider"></div>
+
+                <!-- Destructive action -->
+                <div class="danger">
+                    <h3>Danger zone</h3>
+                    <p>Delete every employee record.</p>
+
+                    <button class="btn danger-btn full" id="deleteAll">
+                        Delete all employees
+                    </button>
+                </div>
+            </aside>
+        </section>
+
+        <!-- Insights -->
+        <section class="insights" id="insights">
+            <article class="panel">
+                <div class="panel-head">
+                    <div>
+                        <label>COMPENSATION</label>
+                        <h2>Salary overview</h2>
+                        <p>Average salary by designation.</p>
+                    </div>
+                    <span class="stat-icon blue">▥</span>
+                </div>
+
+                <div id="chart" class="chart">
+                    <p class="empty">Add employees to see insights.</p>
+                </div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-head">
+                    <div>
+                        <label>WORKSPACE LOG</label>
+                        <h2>Recent activity</h2>
+                        <p>Your latest actions in this session.</p>
+                    </div>
+                    <span class="stat-icon purple">◷</span>
+                </div>
+
+                <div id="activity" class="activity">
+                    <p class="empty">
+                        Your recent actions will appear here.
+                    </p>
+                </div>
+            </article>
+        </section>
+
+        <footer>
+            <span>© <span id="year"></span> EmployeeHub</span>
+            <span>Designed for people, powered by data.</span>
+            <a href="/docs" target="_blank">API documentation ↗</a>
+        </footer>
+    </main>
+</div>
+
+<!-- Toast notifications -->
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<!-- Delete confirmation dialog -->
+<div id="confirm" class="overlay hidden"
+     role="dialog" aria-modal="true">
+
+    <div class="dialog">
+        <span class="warning">!</span>
+        <h2 id="confirmTitle">Are you sure?</h2>
+        <p id="confirmText"></p>
+
+        <div class="dialog-actions">
+            <button class="btn ghost" id="cancelConfirm">Cancel</button>
+            <button class="btn danger-btn" id="acceptConfirm">
+                Confirm delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Workspace profile dialog -->
+<div id="profile" class="overlay hidden"
+     role="dialog" aria-modal="true">
+
+    <div class="dialog profile">
+        <button id="closeProfile" class="close">×</button>
+
+        <span class="profile-logo">EH</span>
+        <h2>EmployeeHub workspace</h2>
+        <p>People operations, made clearer.</p>
+
+        <div class="profile-row">
+            <span>API status</span>
+            <b id="profileStatus">Checking</b>
+        </div>
+
+        <div class="profile-row">
+            <span>Database</span>
+            <b>SQLite</b>
+        </div>
+
+        <div class="profile-row">
+            <span>Backend</span>
+            <b>FastAPI</b>
+        </div>
+
+        <a class="btn soft full" href="/docs" target="_blank">
+            Open API docs ↗
+        </a>
+    </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
