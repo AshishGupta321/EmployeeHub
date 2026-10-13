@@ -1,0 +1,985 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmployeeHub | Management Dashboard</title>
+
+<style>
+:root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --text: #172033;
+    --muted: #78839a;
+    --primary: #635bff;
+    --border: #e8ebf2;
+    --green: #16865c;
+    --red: #d94343;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+button, input, select { font: inherit; }
+
+button { cursor: pointer; }
+
+.layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 235px;
+    background: #171b2c;
+    color: white;
+    padding: 28px 18px;
+    flex-shrink: 0;
+}
+
+.brand {
+    font-size: 23px;
+    font-weight: 800;
+    margin: 0 0 40px 8px;
+}
+
+.brand span { color: #9b95ff; }
+
+.nav-label {
+    color: #929bb2;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    margin: 24px 10px 12px;
+}
+
+.nav-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    color: #c7ccdc;
+    background: transparent;
+    border: 0;
+    padding: 13px 12px;
+    border-radius: 9px;
+    margin-bottom: 5px;
+}
+
+.nav-item.active, .nav-item:hover {
+    color: white;
+    background: #30344c;
+}
+
+.sidebar-note {
+    margin: 50px 6px 0;
+    color: #aab2c7;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.main {
+    flex: 1;
+    min-width: 0;
+    padding: 32px;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 28px;
+}
+
+.eyebrow {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+h1 { font-size: 28px; margin: 0; }
+h2 { font-size: 18px; margin: 0; }
+
+.avatar {
+    background: #e8e6ff;
+    color: var(--primary);
+    border-radius: 50%;
+    width: 43px;
+    height: 43px;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 22px;
+    box-shadow: 0 3px 12px #17203305;
+}
+
+.stat-label { color: var(--muted); font-size: 13px; }
+.stat-value { font-size: 27px; font-weight: 750; margin-top: 13px; }
+.stat-foot { color: var(--muted); font-size: 12px; margin-top: 8px; }
+
+.content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.card-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 11px 15px;
+    font-weight: 600;
+}
+
+.btn-primary { background: var(--primary); color: white; }
+.btn-light { background: #f0efff; color: var(--primary); }
+.btn-danger { background: #fff0f0; color: var(--red); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+input, select {
+    width: 100%;
+    border: 1px solid #dfe3ec;
+    border-radius: 8px;
+    padding: 11px 12px;
+    background: white;
+    color: var(--text);
+    outline: none;
+}
+
+input:focus, select:focus {
+    border-color: var(--primary);
+}
+
+.filters input { flex: 1 1 150px; min-width: 0; }
+.filters select { flex: 1 1 130px; min-width: 0; }
+
+.table-wrap { overflow-x: auto; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+th {
+    color: var(--muted);
+    font-weight: 600;
+    text-align: left;
+    padding: 13px 10px;
+    background: #fafbfe;
+}
+
+td {
+    padding: 15px 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.person { font-weight: 650; }
+.subtext { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+.pill {
+    display: inline-block;
+    background: #efedff;
+    color: #635bce;
+    border-radius: 20px;
+    padding: 6px 9px;
+    font-size: 11px;
+}
+
+.actions { display: flex; gap: 6px; }
+.actions button { padding: 7px 9px; font-size: 12px; }
+
+.field { margin-bottom: 15px; }
+.field label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.form-actions { display: flex; gap: 9px; margin-top: 20px; }
+.form-actions button { flex: 1; }
+
+.message {
+    margin-bottom: 18px;
+    padding: 12px 15px;
+    border-radius: 9px;
+    display: none;
+    font-size: 13px;
+}
+
+.message.success { display: block; background: #e9f8ef; color: #167346; }
+.message.error { display: block; background: #fff0f0; color: #b72d2d; }
+
+.empty { padding: 35px 10px; text-align: center; color: var(--muted); }
+.footer { color: var(--muted); font-size: 12px; margin-top: 22px; }
+
+@media (max-width: 1100px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .content-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 650px) {
+    .sidebar { width: 66px; padding: 20px 8px; }
+    .brand { font-size: 0; margin: 5px 0 35px; text-align: center; }
+    .brand span { font-size: 22px; }
+    .nav-label, .nav-text, .sidebar-note { display: none; }
+    .nav-item { text-align: center; padding: 13px 4px; font-size: 19px; }
+    .main { padding: 18px 12px; }
+    h1 { font-size: 22px; }
+    .stats { gap: 10px; }
+    .card { padding: 15px; }
+    .stat-value { font-size: 22px; }
+}
+
+/* Premium welcome banner */
+.welcome-banner {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-height: 190px;
+    padding: 30px 34px;
+    margin-bottom: 25px;
+    border-radius: 18px;
+    color: white;
+    background: linear-gradient(115deg, #29245f, #635bff 65%, #918bff);
+}
+
+.welcome-banner::before,
+.welcome-banner::after {
+    content: "";
+    position: absolute;
+    border: 1px solid #ffffff25;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.welcome-banner::before {
+    width: 280px;
+    height: 280px;
+    right: 100px;
+    top: -150px;
+}
+
+.welcome-banner::after {
+    width: 200px;
+    height: 200px;
+    right: -55px;
+    bottom: -135px;
+}
+
+.welcome-copy {
+    position: relative;
+    z-index: 1;
+    max-width: 500px;
+}
+
+.welcome-copy h2 {
+    font-size: clamp(22px, 2.5vw, 30px);
+    line-height: 1.25;
+    margin-bottom: 12px;
+}
+
+.welcome-copy p {
+    color: #e5e3ff;
+    line-height: 1.7;
+    margin: 0 0 20px;
+}
+
+.welcome-copy .btn {
+    background: white;
+    color: #5147db;
+}
+
+.welcome-art {
+    position: relative;
+    z-index: 1;
+    width: 180px;
+    min-width: 130px;
+    height: 125px;
+    display: grid;
+    place-items: center;
+    border-radius: 22px;
+    background: #ffffff17;
+    border: 1px solid #ffffff35;
+    backdrop-filter: blur(8px);
+}
+
+.welcome-art svg {
+    width: 125px;
+    height: 100px;
+}
+
+.employee-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    display: inline-grid;
+    place-items: center;
+    margin-right: 9px;
+    color: #5147db;
+    background: #efedff;
+    font-weight: 750;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.stat-icon {
+    width: 39px;
+    height: 39px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #efedff;
+    color: #635bff;
+    margin-bottom: 14px;
+}
+
+@media (max-width: 650px) {
+    .welcome-banner { padding: 24px 20px; }
+    .welcome-art { width: 100px; min-width: 90px; height: 100px; }
+    .welcome-art svg { width: 80px; }
+}
+
+</style>
+</head>
+
+<body>
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="brand">Employee<span>Hub</span></div>
+
+        <div class="nav-label">WORKSPACE</div>
+        <button class="nav-item active" onclick="showDashboard()">▦
+            <span class="nav-text"> Dashboard</span>
+        </button>
+        <button class="nav-item" onclick="focusEmployees()">♙
+            <span class="nav-text"> Employees</span>
+        </button>
+
+        <div class="nav-label">MANAGEMENT</div>
+        <button class="nav-item" onclick="focusForm()">＋
+            <span class="nav-text"> Add Employee</span>
+        </button>
+        <button class="nav-item" onclick="loadStats()">▤
+            <span class="nav-text"> Salary Insights</span>
+        </button>
+
+        <div class="sidebar-note">
+            EMPLOYEE MANAGEMENT<br>
+            FastAPI · SQLite
+        </div>
+    </aside>
+
+    <main class="main" id="dashboard">
+        <div class="topbar">
+            <div>
+                <div class="eyebrow">WORKSPACE / OVERVIEW</div>
+                <h1>Employee Dashboard</h1>
+                <div class="eyebrow" style="margin-top:9px">
+                    Manage your people, all in one place.
+                </div>
+            </div>
+            <div class="avatar">EH</div>
+        </div>
+    
+<section class="welcome-banner">
+    <div class="welcome-copy">
+        <div style="font-size:12px;letter-spacing:2px;margin-bottom:12px">
+            YOUR PEOPLE. YOUR WORKSPACE.
+        </div>
+        <h2>Great teams start with great people.</h2>
+        <p>
+            Manage your workforce, track salary insights,
+            and keep every employee detail organized.
+        </p>
+        <button class="btn" onclick="focusEmployees()">
+            Explore employees →
+        </button>
+    </div>
+
+    <div class="welcome-art" aria-label="Team illustration">
+        <svg viewBox="0 0 140 110" fill="none"
+             xmlns="http://www.w3.org/2000/svg">
+            <rect x="14" y="48" width="112" height="54"
+                  rx="12" fill="#FFFFFF" fill-opacity=".17"/>
+            <circle cx="45" cy="34" r="16" fill="#FFD6B8"/>
+            <path d="M29 33C29 12 61 12 61 33V27H29Z"
+                  fill="#29245F"/>
+            <path d="M20 78C20 56 70 56 70 78V91H20V78Z"
+                  fill="#B9B4FF"/>
+            <circle cx="94" cy="35" r="15" fill="#F6C5A8"/>
+            <path d="M79 32C79 12 109 13 109 32L104 24L84 25Z"
+                  fill="#3C315F"/>
+            <path d="M72 79C72 57 117 57 117 79V91H72V79Z"
+                  fill="#8EE0CF"/>
+            <circle cx="70" cy="17" r="8" fill="#FFE18A"/>
+            <path d="M67 17L70 20L75 14"
+                  stroke="#5147DB" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </div>
+</section>
+
+        <div id="message" class="message"></div>
+
+        <section class="stats">
+            <div class="card">
+                <div class="stat-label">Total Employees</div>
+                <div class="stat-value" id="total">—</div>
+                <div class="stat-foot">Registered employees</div>
+            </div>
+            <div class="card">
+                <div class="stat-label">Average Salary</div>
+                <div class="stat-value" id="average">—</div>
+                <div class="stat-foot">Across all employees</div>
+            </div>
+            <div class="card">
+                <div class="stat-label">Highest Salary</div>
+                <div class="stat-value" id="highest">—</div>
+                <div class="stat-foot" id="highestName">Top salary</div>
+            </div>
+            <div class="card">
+                <div class="stat-label">Lowest Salary</div>
+                <div class="stat-value" id="lowest">—</div>
+                <div class="stat-foot" id="lowestName">Lowest salary</div>
+            </div>
+        </section>
+
+        <section class="content-grid">
+            <div class="card" id="employees">
+                <div class="card-heading">
+                    <div>
+                        <h2>Employee Directory</h2>
+                        <div class="eyebrow" style="margin-top:7px">
+                            Browse and manage your team
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="focusForm()">
+                        + Add
+                    </button>
+                </div>
+
+                <div class="filters">
+                    <input id="search" placeholder="Search name or ID..."
+                           oninput="renderEmployees()">
+                    <select id="designation" onchange="renderEmployees()">
+                        <option value="">All designations</option>
+                    </select>
+                    <select id="sort" onchange="renderEmployees()">
+                        <option value="id">Sort: ID</option>
+                        <option value="name">Sort: Name</option>
+                        <option value="salary">Sort: Salary ↑</option>
+                        <option value="salaryDesc">Sort: Salary ↓</option>
+                        <option value="age">Sort: Age</option>
+                    </select>
+                </div>
+
+                <div class="filters">
+                    <input id="minSalary" type="number" min="0"
+                           placeholder="Minimum salary">
+                    <input id="maxSalary" type="number" min="0"
+                           placeholder="Maximum salary">
+                    <button class="btn btn-light" onclick="applySalaryFilter()">
+                        Filter
+                    </button>
+                    <button class="btn btn-light" onclick="clearFilters()">
+                        Reset
+                    </button>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>EMPLOYEE</th>
+                            <th>AGE</th>
+                            <th>SALARY</th>
+                            <th>DESIGNATION</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                        </thead>
+                        <tbody id="employeeRows">
+                        <tr><td colspan="5" class="empty">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="footer" id="resultCount"></div>
+            </div>
+
+            <div class="card" id="employeeForm">
+                <div class="card-heading">
+                    <div>
+                        <h2 id="formTitle">Add Employee</h2>
+                        <div class="eyebrow" style="margin-top:7px">
+                            Enter employee details
+                        </div>
+                    </div>
+                </div>
+
+                <form id="form">
+                    <div class="field">
+                        <label for="empId">Employee ID</label>
+                        <input id="empId" type="number" required min="1"
+                               placeholder="e.g. 105">
+                    </div>
+                    <div class="field">
+                        <label for="empName">Full Name</label>
+                        <input id="empName" required maxlength="50"
+                               placeholder="Enter full name">
+                    </div>
+                    <div class="field">
+                        <label for="empAge">Age</label>
+                        <input id="empAge" type="number" required min="0"
+                               placeholder="e.g. 24">
+                    </div>
+                    <div class="field">
+                        <label for="empSalary">Salary (₹)</label>
+                        <input id="empSalary" type="number" required min="0"
+                               step="0.01" placeholder="e.g. 35000">
+                    </div>
+                    <div class="field">
+                        <label for="empDesig">Designation</label>
+                        <input id="empDesig" required maxlength="50"
+                               placeholder="e.g. Developer">
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-primary" type="submit"
+                                id="saveButton">Add Employee</button>
+                        <button class="btn btn-light" type="button"
+                                onclick="resetForm()">Clear</button>
+                    </div>
+                </form>
+
+                <div style="border-top:1px solid var(--border); margin-top:25px; padding-top:20px">
+                    <h2 style="font-size:15px">Salary Increase</h2>
+                    <div class="eyebrow" style="margin-top:7px">
+                        Increase salary for an existing employee
+                    </div>
+                    <div class="field" style="margin-top:15px">
+                        <label for="raiseId">Employee ID</label>
+                        <input id="raiseId" type="number" min="1"
+                               placeholder="Employee ID">
+                    </div>
+                    <div class="field">
+                        <label for="raiseAmount">Increase Amount (₹)</label>
+                        <input id="raiseAmount" type="number" min="0.01"
+                               step="0.01" placeholder="e.g. 2000">
+                    </div>
+                    <button class="btn btn-light" style="width:100%"
+                            onclick="increaseSalary()">Apply Increase</button>
+                </div>
+
+                <div style="border-top:1px solid var(--border); margin-top:25px; padding-top:20px">
+                    <h2 style="font-size:15px">Danger Zone</h2>
+                    <div class="eyebrow" style="margin:8px 0 13px">
+                        Delete every employee record
+                    </div>
+                    <button class="btn btn-danger" style="width:100%"
+                            onclick="deleteAll()">Delete All Employees</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+const API = "";
+let employees = [];
+let salaryFilter = null;
+let editingId = null;
+
+const $ = id => document.getElementById(id);
+const money = value => value == null
+    ? "—"
+    : "₹" + Number(value).toLocaleString("en-IN", {
+        maximumFractionDigits: 2
+    });
+
+async function request(url, options = {}) {
+    const response = await fetch(API + url, {
+        ...options,
+        headers: {
+            "Content-Type": "application/json",
+            ...(options.headers || {})
+        }
+    });
+
+    const text = await response.text();
+    let data = null;
+
+    try { data = text ? JSON.parse(text) : null; }
+    catch { data = text; }
+
+    if (!response.ok) {
+        const detail = data?.detail;
+        throw new Error(typeof detail === "string"
+            ? detail : `Request failed (${response.status})`);
+    }
+
+    return data;
+}
+
+function notify(message, type = "success") {
+    const box = $("message");
+    box.textContent = message;
+    box.className = "message " + type;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    clearTimeout(notify.timer);
+    notify.timer = setTimeout(() => {
+        box.className = "message";
+    }, 4000);
+}
+
+async function loadEmployees() {
+    try {
+        employees = await request("/employees");
+        updateDesignationOptions();
+        renderEmployees();
+        await loadStats();
+    } catch (error) {
+        notify("Could not load employees: " + error.message, "error");
+        $("employeeRows").innerHTML =
+            '<tr><td colspan="5" class="empty">Could not load records.</td></tr>';
+    }
+}
+
+function updateDesignationOptions() {
+    const select = $("designation");
+    const selected = select.value;
+    const designations = [...new Set(
+        employees.map(e => e.desig).filter(Boolean)
+    )].sort();
+
+    select.innerHTML = '<option value="">All designations</option>';
+
+    for (const designation of designations) {
+        const option = document.createElement("option");
+        option.value = designation;
+        option.textContent = designation;
+        select.appendChild(option);
+    }
+
+    select.value = selected;
+}
+
+function renderEmployees() {
+    const search = $("search").value.trim().toLowerCase();
+    const designation = $("designation").value;
+    const sort = $("sort").value;
+
+    let filtered = employees.filter(emp => {
+        const matchesSearch =
+            String(emp.id).includes(search) ||
+            emp.name.toLowerCase().includes(search);
+
+        const matchesDesignation =
+            !designation || emp.desig === designation;
+
+        const matchesSalary = !salaryFilter ||
+            (emp.salary >= salaryFilter.min &&
+             emp.salary <= salaryFilter.max);
+
+        return matchesSearch && matchesDesignation && matchesSalary;
+    });
+
+    filtered.sort((a, b) => {
+        if (sort === "name") return a.name.localeCompare(b.name);
+        if (sort === "salary") return a.salary - b.salary;
+        if (sort === "salaryDesc") return b.salary - a.salary;
+        if (sort === "age") return a.age - b.age;
+        return a.id - b.id;
+    });
+
+    const tbody = $("employeeRows");
+    tbody.replaceChildren();
+
+    if (!filtered.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 5;
+        td.className = "empty";
+        td.textContent = "No matching employees found.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+    }
+
+    for (const emp of filtered) {
+        const tr = document.createElement("tr");
+        const nameCell = document.createElement("td");
+        const name = document.createElement("div");
+        name.className = "person";
+        name.textContent = emp.name;
+        const id = document.createElement("div");
+        id.className = "subtext";
+        id.textContent = "ID: " + emp.id;
+        nameCell.append(name, id);
+
+        const ageCell = document.createElement("td");
+        ageCell.textContent = emp.age;
+
+        const salaryCell = document.createElement("td");
+        salaryCell.textContent = money(emp.salary);
+
+        const designationCell = document.createElement("td");
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        pill.textContent = emp.desig;
+        designationCell.appendChild(pill);
+
+        const actions = document.createElement("td");
+        const actionGroup = document.createElement("div");
+        actionGroup.className = "actions";
+
+        const edit = document.createElement("button");
+        edit.className = "btn btn-light";
+        edit.textContent = "Edit";
+        edit.addEventListener("click", () => editEmployee(emp.id));
+
+        const del = document.createElement("button");
+        del.className = "btn btn-danger";
+        del.textContent = "Delete";
+        del.addEventListener("click", () => deleteEmployee(emp.id));
+
+        actionGroup.append(edit, del);
+        actions.appendChild(actionGroup);
+        tr.append(nameCell, ageCell, salaryCell, designationCell, actions);
+        tbody.appendChild(tr);
+    }
+
+    $("resultCount").textContent =
+        `Showing ${filtered.length} of ${employees.length} employees`;
+}
+
+async function loadStats() {
+    try {
+        const [count, average, extremes] = await Promise.all([
+            request("/employees/stats/count"),
+            request("/employees/stats/average-salary"),
+            request("/employees/stats/salary-extremes")
+        ]);
+
+        $("total").textContent = count.total_employees;
+        $("average").textContent = money(average.average_salary);
+
+        const highest = extremes.highest_salary_employees || [];
+        const lowest = extremes.lowest_salary_employees || [];
+
+        $("highest").textContent = highest.length
+            ? money(highest[0].salary) : "—";
+        $("highestName").textContent = highest.length
+            ? highest.map(e => e.name).join(", ") : "No records";
+
+        $("lowest").textContent = lowest.length
+            ? money(lowest[0].salary) : "—";
+        $("lowestName").textContent = lowest.length
+            ? lowest.map(e => e.name).join(", ") : "No records";
+    } catch (error) {
+        notify("Could not load statistics: " + error.message, "error");
+    }
+}
+
+$("form").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const id = Number($("empId").value);
+    const employee = {
+        name: $("empName").value.trim(),
+        age: Number($("empAge").value),
+        salary: Number($("empSalary").value),
+        desig: $("empDesig").value.trim()
+    };
+
+    if (!employee.name || !employee.desig ||
+        employee.age < 0 || employee.salary < 0) {
+        notify("Please enter valid employee details.", "error");
+        return;
+    }
+
+    if (!Number.isInteger(id) || id < 1) {
+        notify("Employee ID must be a positive integer.", "error");
+        return;
+    }
+
+    try {
+        if (editingId !== null) {
+            await request(`/employees/${editingId}`, {
+                method: "PUT",
+                body: JSON.stringify(employee)
+            });
+            notify("Employee updated successfully!");
+        } else {
+            await request("/employees", {
+                method: "POST",
+                body: JSON.stringify({ id, ...employee })
+            });
+            notify("Employee added successfully!");
+        }
+
+        resetForm();
+        await loadEmployees();
+    } catch (error) {
+        notify(error.message, "error");
+    }
+});
+
+function editEmployee(id) {
+    const emp = employees.find(e => e.id === id);
+    if (!emp) return;
+
+    editingId = id;
+    $("empId").value = emp.id;
+    $("empId").disabled = true;
+    $("empName").value = emp.name;
+    $("empAge").value = emp.age;
+    $("empSalary").value = emp.salary;
+    $("empDesig").value = emp.desig;
+    $("formTitle").textContent = "Edit Employee #" + id;
+    $("saveButton").textContent = "Save Changes";
+    focusForm();
+}
+
+function resetForm() {
+    $("form").reset();
+    editingId = null;
+    $("empId").disabled = false;
+    $("formTitle").textContent = "Add Employee";
+    $("saveButton").textContent = "Add Employee";
+}
+
+async function deleteEmployee(id) {
+    const emp = employees.find(e => e.id === id);
+    if (!confirm(`Delete ${emp?.name || "employee"} (ID ${id})?`)) return;
+
+    try {
+        await request(`/employees/${id}`, { method: "DELETE" });
+        if (editingId === id) resetForm();
+        notify("Employee deleted successfully!");
+        await loadEmployees();
+    } catch (error) {
+        notify(error.message, "error");
+    }
+}
+
+async function increaseSalary() {
+    const id = Number($("raiseId").value);
+    const amount = Number($("raiseAmount").value);
+
+    if (!Number.isInteger(id) || id < 1 || !Number.isFinite(amount) || amount <= 0) {
+        notify("Enter a valid employee ID and positive increase amount.", "error");
+        return;
+    }
+
+    try {
+        await request(`/employees/${id}/salary?amount=${amount}`, {
+            method: "PATCH"
+        });
+        $("raiseAmount").value = "";
+        notify("Salary increased successfully!");
+        await loadEmployees();
+    } catch (error) {
+        notify(error.message, "error");
+    }
+}
+
+async function deleteAll() {
+    if (!confirm("Delete ALL employee records? This cannot be undone.")) return;
+    if (prompt('Type DELETE to confirm clearing the database:') !== "DELETE") {
+        notify("Deletion cancelled.", "error");
+        return;
+    }
+
+    try {
+        const result = await request("/employees?confirm=true", {
+            method: "DELETE"
+        });
+        resetForm();
+        notify(`${result.deleted_count} employee records deleted.`);
+        await loadEmployees();
+    } catch (error) {
+        notify(error.message, "error");
+    }
+}
+
+function applySalaryFilter() {
+    const min = $("minSalary").value;
+    const max = $("maxSalary").value;
+
+    if (min === "" || max === "" || Number(min) < 0 ||
+        Number(max) < Number(min)) {
+        notify("Enter a valid minimum and maximum salary.", "error");
+        return;
+    }
+
+    salaryFilter = { min: Number(min), max: Number(max) };
+    renderEmployees();
+}
+
+function clearFilters() {
+    $("search").value = "";
+    $("designation").value = "";
+    $("minSalary").value = "";
+    $("maxSalary").value = "";
+    $("sort").value = "id";
+    salaryFilter = null;
+    renderEmployees();
+}
+
+function showDashboard() {
+    $("dashboard").scrollIntoView({ behavior: "smooth" });
+}
+
+function focusEmployees() {
+    $("employees").scrollIntoView({ behavior: "smooth" });
+}
+
+function focusForm() {
+    $("employeeForm").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("empName").focus({ preventScroll: true });
+}
+
+loadEmployees();
+</script>
+</body>
+</html>

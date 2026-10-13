@@ -1,30 +1,41 @@
-# app.py
 
+import os
 from pathlib import Path
-import sqlite3
 from typing import Optional
 
+import psycopg
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from psycopg.rows import dict_row
 from pydantic import BaseModel, Field
 
 BASE = Path(__file__).resolve().parent
-DB_PATH = BASE / "EmployeeDB.db"
+load_dotenv(BASE / ".env")
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 app = FastAPI(title="EmployeeHub API", version="2.0.0")
 
 app.mount(
     "/static",
     StaticFiles(directory=BASE / "static"),
-    name="static"
+    name="static",
 )
 
 
 def db():
-    con = sqlite3.connect(DB_PATH)
-    con.row_factory = sqlite3.Row
-    return con
+    if not DATABASE_URL:
+        raise RuntimeError(
+            "DATABASE_URL is missing. Configure it in .env locally "
+            "or in Vercel Environment Variables."
+        )
+
+    return psycopg.connect(
+        DATABASE_URL,
+        row_factory=dict_row,
+    )
 
 
 def init_db():
@@ -32,28 +43,12 @@ def init_db():
         con.execute("""
             CREATE TABLE IF NOT EXISTS employees (
                 id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                age INTEGER NOT NULL,
-                salary REAL NOT NULL,
-                desig TEXT NOT NULL
+                name VARCHAR(100) NOT NULL,
+                age INTEGER NOT NULL CHECK (age BETWEEN 16 AND 100),
+                salary DOUBLE PRECISION NOT NULL CHECK (salary >= 0),
+                desig VARCHAR(100) NOT NULL
             )
         """)
-
-        # Support databases using "designation" instead of "desig".
-        cols = {
-            row["name"]
-            for row in con.execute("PRAGMA table_info(employees)")
-        }
-
-        if "desig" not in cols and "designation" in cols:
-            con.execute("ALTER TABLE employees ADD COLUMN desig TEXT")
-            con.execute("""
-                UPDATE employees
-                SET desig = designation
-                WHERE desig IS NULL
-            """)
-
-        con.commit()
 
 
 @app.on_event("startup")
@@ -66,15 +61,12 @@ def as_employee(row):
         return None
 
     employee = dict(row)
-
-    # Support both field names for frontend compatibility.
     employee["designation"] = employee.get(
         "desig", employee.get("designation", "")
     )
     employee["desig"] = employee.get(
         "desig", employee.get("designation", "")
     )
-
     return employee
 
 
@@ -87,14 +79,10 @@ class EmployeeIn(BaseModel):
 
 
 class EmployeeUpdate(BaseModel):
-    name: Optional[str] = Field(
-        None, min_length=1, max_length=100
-    )
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
     age: Optional[int] = Field(None, ge=16, le=100)
     salary: Optional[float] = Field(None, ge=0)
-    desig: Optional[str] = Field(
-        None, min_length=1, max_length=100
-    )
+    desig: Optional[str] = Field(None, min_length=1, max_length=100)
 
 
 @app.get("/", include_in_schema=False)
@@ -111,14 +99,14 @@ def list_employees(
     max_salary: Optional[float] = Query(None, ge=0),
     min_age: Optional[int] = None,
     max_age: Optional[int] = None,
-    sort: str = "id"
+    sort: str = "id",
 ):
     sort_map = {
         "id": "id",
-        "name": "name COLLATE NOCASE",
+        "name": "LOWER(name)",
         "age": "age",
         "salary": "salary",
-        "designation": "desig COLLATE NOCASE"
+        "designation": "LOWER(desig)",
     }
 
     key = sort.lstrip("-")
@@ -138,30 +126,30 @@ def list_employees(
         term = f"%{search.strip()}%"
         sql += """
             AND (
-                CAST(id AS TEXT) LIKE ?
-                OR name LIKE ?
+                CAST(id AS TEXT) ILIKE %s
+                OR name ILIKE %s
             )
         """
         args.extend([term, term])
 
     if designation:
-        sql += " AND desig = ?"
+        sql += " AND desig = %s"
         args.append(designation)
 
     if min_salary is not None:
-        sql += " AND salary >= ?"
+        sql += " AND salary >= %s"
         args.append(min_salary)
 
     if max_salary is not None:
-        sql += " AND salary <= ?"
+        sql += " AND salary <= %s"
         args.append(max_salary)
 
     if min_age is not None:
-        sql += " AND age >= ?"
+        sql += " AND age >= %s"
         args.append(min_age)
 
     if max_age is not None:
-        sql += " AND age <= ?"
+        sql += " AND age <= %s"
         args.append(max_age)
 
     sql += f" ORDER BY {sort_map[key]} {direction}"
@@ -177,61 +165,58 @@ def list_employees(
 def add_employee(employee: EmployeeIn):
     with db() as con:
         exists = con.execute(
-            "SELECT id FROM employees WHERE id = ?",
-            (employee.id,)
+            "SELECT id FROM employees WHERE id = %s",
+            (employee.id,),
         ).fetchone()
 
         if exists:
             raise HTTPException(
                 status_code=409,
-                detail="Employee ID already exists"
+                detail="Employee ID already exists",
             )
 
         con.execute("""
-            INSERT INTO employees
-                (id, name, age, salary, desig)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO employees (id, name, age, salary, desig)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             employee.id,
             employee.name.strip(),
             employee.age,
             employee.salary,
-            employee.desig.strip()
+            employee.desig.strip(),
         ))
 
         row = con.execute("""
             SELECT id, name, age, salary, desig
             FROM employees
-            WHERE id = ?
+            WHERE id = %s
         """, (employee.id,)).fetchone()
-
-        con.commit()
 
     return {
         "message": "Employee added successfully",
-        "employee": as_employee(row)
+        "employee": as_employee(row),
     }
 
 
-# Dashboard statistics: define these before /employees/{employee_id}.
+# Dashboard statistics.
 @app.get("/employees/stats/count")
 def stats_count():
     with db() as con:
-        count = con.execute(
-            "SELECT COUNT(*) FROM employees"
-        ).fetchone()[0]
+        row = con.execute(
+            "SELECT COUNT(*) AS count FROM employees"
+        ).fetchone()
 
-    return {"count": count}
+    return {"count": row["count"]}
 
 
 @app.get("/employees/stats/average-salary")
 def stats_average():
     with db() as con:
-        average = con.execute(
-            "SELECT AVG(salary) FROM employees"
-        ).fetchone()[0]
+        row = con.execute(
+            "SELECT AVG(salary) AS average FROM employees"
+        ).fetchone()
 
-    return {"average_salary": round(average or 0, 2)}
+    return {"average_salary": round(row["average"] or 0, 2)}
 
 
 @app.get("/employees/stats/salary-extremes")
@@ -253,7 +238,7 @@ def stats_extremes():
 
     return {
         "highest": as_employee(highest),
-        "lowest": as_employee(lowest)
+        "lowest": as_employee(lowest),
     }
 
 
@@ -280,13 +265,13 @@ def get_employee(employee_id: int):
         row = con.execute("""
             SELECT id, name, age, salary, desig
             FROM employees
-            WHERE id = ?
+            WHERE id = %s
         """, (employee_id,)).fetchone()
 
     if not row:
         raise HTTPException(
             status_code=404,
-            detail="Employee not found"
+            detail="Employee not found",
         )
 
     return as_employee(row)
@@ -294,54 +279,53 @@ def get_employee(employee_id: int):
 
 # UPDATE: Edit employee details.
 @app.put("/employees/{employee_id}")
-def update_employee(
-    employee_id: int,
-    employee: EmployeeUpdate
-):
+def update_employee(employee_id: int, employee: EmployeeUpdate):
     changes = employee.model_dump(exclude_unset=True)
 
     if not changes:
         raise HTTPException(
             status_code=400,
-            detail="Provide at least one field to update"
+            detail="Provide at least one field to update",
         )
 
     for key in ("name", "desig"):
         if key in changes and changes[key] is not None:
             changes[key] = changes[key].strip()
 
+    # Only these model-defined columns can be updated.
+    allowed = {"name", "age", "salary", "desig"}
+    changes = {k: v for k, v in changes.items() if k in allowed}
+
     with db() as con:
         exists = con.execute(
-            "SELECT id FROM employees WHERE id = ?",
-            (employee_id,)
+            "SELECT id FROM employees WHERE id = %s",
+            (employee_id,),
         ).fetchone()
 
         if not exists:
             raise HTTPException(
                 status_code=404,
-                detail="Employee not found"
+                detail="Employee not found",
             )
 
         assignments = ", ".join(
-            f"{key} = ?" for key in changes
+            f"{key} = %s" for key in changes
         )
 
         con.execute(
-            f"UPDATE employees SET {assignments} WHERE id = ?",
-            [*changes.values(), employee_id]
+            f"UPDATE employees SET {assignments} WHERE id = %s",
+            [*changes.values(), employee_id],
         )
 
         row = con.execute("""
             SELECT id, name, age, salary, desig
             FROM employees
-            WHERE id = ?
+            WHERE id = %s
         """, (employee_id,)).fetchone()
-
-        con.commit()
 
     return {
         "message": "Employee updated successfully",
-        "employee": as_employee(row)
+        "employee": as_employee(row),
     }
 
 
@@ -349,37 +333,35 @@ def update_employee(
 @app.post("/employees/{employee_id}/increase-salary")
 def increase_salary(
     employee_id: int,
-    amount: float = Query(gt=0)
+    amount: float = Query(gt=0),
 ):
     with db() as con:
         exists = con.execute(
-            "SELECT id FROM employees WHERE id = ?",
-            (employee_id,)
+            "SELECT id FROM employees WHERE id = %s",
+            (employee_id,),
         ).fetchone()
 
         if not exists:
             raise HTTPException(
                 status_code=404,
-                detail="Employee not found"
+                detail="Employee not found",
             )
 
         con.execute("""
             UPDATE employees
-            SET salary = salary + ?
-            WHERE id = ?
+            SET salary = salary + %s
+            WHERE id = %s
         """, (amount, employee_id))
 
         row = con.execute("""
             SELECT id, name, age, salary, desig
             FROM employees
-            WHERE id = ?
+            WHERE id = %s
         """, (employee_id,)).fetchone()
-
-        con.commit()
 
     return {
         "message": "Salary increased successfully",
-        "employee": as_employee(row)
+        "employee": as_employee(row),
     }
 
 
@@ -388,15 +370,16 @@ def increase_salary(
 def delete_employee(employee_id: int):
     with db() as con:
         cursor = con.execute(
-            "DELETE FROM employees WHERE id = ?",
-            (employee_id,)
+            "DELETE FROM employees WHERE id = %s",
+            (employee_id,),
         )
-        con.commit()
 
-    if cursor.rowcount == 0:
+        deleted = cursor.rowcount
+
+    if deleted == 0:
         raise HTTPException(
             status_code=404,
-            detail="Employee not found"
+            detail="Employee not found",
         )
 
     return {"message": "Employee deleted successfully"}
@@ -408,9 +391,8 @@ def delete_all_employees():
     with db() as con:
         cursor = con.execute("DELETE FROM employees")
         deleted = cursor.rowcount
-        con.commit()
 
     return {
         "message": "All employee records deleted",
-        "deleted_count": deleted
+        "deleted_count": deleted,
     }
