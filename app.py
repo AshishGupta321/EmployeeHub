@@ -1,4 +1,5 @@
 
+import logging
 import os
 from pathlib import Path
 from typing import Optional
@@ -10,6 +11,16 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
 from pydantic import BaseModel, Field
+
+from chatbot_service import answer_question
+
+
+# --------------------------------------------------
+# Configuration
+# --------------------------------------------------
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 BASE = Path(__file__).resolve().parent
 load_dotenv(BASE / ".env")
@@ -24,6 +35,10 @@ app.mount(
     name="static",
 )
 
+
+# --------------------------------------------------
+# Database
+# --------------------------------------------------
 
 def db():
     if not DATABASE_URL:
@@ -70,6 +85,10 @@ def as_employee(row):
     return employee
 
 
+# --------------------------------------------------
+# Request models
+# --------------------------------------------------
+
 class EmployeeIn(BaseModel):
     id: int = Field(gt=0)
     name: str = Field(min_length=1, max_length=100)
@@ -85,12 +104,23 @@ class EmployeeUpdate(BaseModel):
     desig: Optional[str] = Field(None, min_length=1, max_length=100)
 
 
+class ChatRequest(BaseModel):
+    message: str
+
+
+# --------------------------------------------------
+# Frontend
+# --------------------------------------------------
+
 @app.get("/", include_in_schema=False)
 def home():
     return FileResponse(BASE / "templates" / "index.html")
 
 
-# READ: List employees with optional filtering and sorting.
+# --------------------------------------------------
+# READ: List employees
+# --------------------------------------------------
+
 @app.get("/employees")
 def list_employees(
     search: Optional[str] = None,
@@ -160,7 +190,10 @@ def list_employees(
     return [as_employee(row) for row in rows]
 
 
-# CREATE: Add an employee.
+# --------------------------------------------------
+# CREATE: Add employee
+# --------------------------------------------------
+
 @app.post("/employees", status_code=201)
 def add_employee(employee: EmployeeIn):
     with db() as con:
@@ -198,7 +231,10 @@ def add_employee(employee: EmployeeIn):
     }
 
 
-# Dashboard statistics.
+# --------------------------------------------------
+# Dashboard statistics
+# --------------------------------------------------
+
 @app.get("/employees/stats/count")
 def stats_count():
     with db() as con:
@@ -258,7 +294,10 @@ def stats_designations():
     ]
 
 
-# READ: Get one employee.
+# --------------------------------------------------
+# READ: Get one employee
+# --------------------------------------------------
+
 @app.get("/employees/{employee_id}")
 def get_employee(employee_id: int):
     with db() as con:
@@ -277,7 +316,10 @@ def get_employee(employee_id: int):
     return as_employee(row)
 
 
-# UPDATE: Edit employee details.
+# --------------------------------------------------
+# UPDATE: Employee details
+# --------------------------------------------------
+
 @app.put("/employees/{employee_id}")
 def update_employee(employee_id: int, employee: EmployeeUpdate):
     changes = employee.model_dump(exclude_unset=True)
@@ -292,9 +334,12 @@ def update_employee(employee_id: int, employee: EmployeeUpdate):
         if key in changes and changes[key] is not None:
             changes[key] = changes[key].strip()
 
-    # Only these model-defined columns can be updated.
     allowed = {"name", "age", "salary", "desig"}
-    changes = {k: v for k, v in changes.items() if k in allowed}
+    changes = {
+        key: value
+        for key, value in changes.items()
+        if key in allowed
+    }
 
     with db() as con:
         exists = con.execute(
@@ -329,7 +374,10 @@ def update_employee(employee_id: int, employee: EmployeeUpdate):
     }
 
 
-# Increase an employee's salary.
+# --------------------------------------------------
+# Increase salary
+# --------------------------------------------------
+
 @app.post("/employees/{employee_id}/increase-salary")
 def increase_salary(
     employee_id: int,
@@ -365,7 +413,10 @@ def increase_salary(
     }
 
 
-# DELETE: One employee.
+# --------------------------------------------------
+# DELETE: One employee
+# --------------------------------------------------
+
 @app.delete("/employees/{employee_id}")
 def delete_employee(employee_id: int):
     with db() as con:
@@ -373,7 +424,6 @@ def delete_employee(employee_id: int):
             "DELETE FROM employees WHERE id = %s",
             (employee_id,),
         )
-
         deleted = cursor.rowcount
 
     if deleted == 0:
@@ -385,7 +435,10 @@ def delete_employee(employee_id: int):
     return {"message": "Employee deleted successfully"}
 
 
-# DELETE: All employees.
+# --------------------------------------------------
+# DELETE: All employees
+# --------------------------------------------------
+
 @app.delete("/employees")
 def delete_all_employees():
     with db() as con:
@@ -396,3 +449,45 @@ def delete_all_employees():
         "message": "All employee records deleted",
         "deleted_count": deleted,
     }
+
+
+# --------------------------------------------------
+# AI Chatbot
+# --------------------------------------------------
+
+@app.post("/chat")
+def chat(request: ChatRequest):
+    message = request.message.strip()
+
+    if not message:
+        return {
+            "answer": "Please enter a question.",
+            "sources": [],
+        }
+
+    if len(message) > 2000:
+        return {
+            "answer": "Please keep your question under 2000 characters.",
+            "sources": [],
+        }
+
+    try:
+        logger.info(
+            "Chatbot request received (message_length=%s)",
+            len(message),
+        )
+
+        result = answer_question(message)
+
+        logger.info("Chatbot request completed successfully")
+        return result
+
+    except Exception:
+        # Full traceback goes to the server terminal.
+        # Never expose API keys or database credentials to the browser.
+        logger.exception("EmployeeHub chatbot request failed")
+
+        raise HTTPException(
+            status_code=500,
+            detail="The chatbot is temporarily unavailable. Please try again.",
+        )
